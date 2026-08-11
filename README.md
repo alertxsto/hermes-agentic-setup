@@ -79,6 +79,9 @@ This isn't a toy. The agent carries a real tool + knowledge surface:
   CT-logs, prompt-injection detection.
 - **Design/taste system** — ships UI that doesn't look AI-generated.
 - **Multi-crawler deep research** — real research projects into categorized output.
+- **WebReaper scraping** — a fast, free, MIT scraper with auto bot-protection and
+  stealth (Cloudflare/DataDome), the self-hosted Firecrawl alternative. See
+  [`skills/software-development/webreaper/`](skills/software-development/webreaper/).
 
 Full map: [`skills/index.md`](skills/index.md).
 

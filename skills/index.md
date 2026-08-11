@@ -16,7 +16,7 @@ below are counted from the live filesystem (`~/.hermes/skills`), not guessed.
 | **6 × security skills** | Linux audit-log intrusion, web-server threat detection, MCP tool-poisoning audit, CT-log monitoring, API security testing, AI prompt-injection detection. |
 | **`structured-multi-crawler-research`** | Multi-crawler deep research into categorized folders (used for real research projects). |
 | **`taste-*`** (7) | Anti-slop design system: default, editorial, soft-calm, strict-GSAP, image-gen, redesign, complete-output — the agent ships UI that doesn't look AI-generated. |
-| **`webreaper`** | Fast, free, MIT scraper — a self-hosted Firecrawl alternative (bot-protection, stealth). |
+| **`webreaper`** | Fast, free, MIT scraper — a self-hosted Firecrawl alternative. Auto bot-protection climb (HTTP → browser → stealth), `--schema`/`--prompt`/`--infer` extraction, `--max-age` caching. Full skill in [`skills/software-development/webreaper/`](software-development/webreaper/). |
 | **`hermes-memory-maintenance`** | Keeps the agent's own memory healthy: audit, dedupe, expand caps, archive to skills. |
 
 ## By directory (live count)
