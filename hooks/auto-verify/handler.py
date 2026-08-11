@@ -203,6 +203,12 @@ async def handle(event_type: str, context: dict):
                     continue
                 if any(n in line for n in ("stream_error_clean", "stream ended", "INFO")):
                     continue
+                # Filter infra/routine noise that recurs and is not actionable for
+                # a coding task (webhook route reload, etc.).
+                if any(n in line.lower() for n in (
+                    "webhook] failed to reload", "webhook reload",
+                    "reload dynamic routes", "route reload")):
+                    continue
                 try:
                     if datetime.fromisoformat(m.group(1).replace(" ", "T")) >= cutoff:
                         errs.append(line.strip())
