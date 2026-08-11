@@ -9,7 +9,7 @@ scripts), not invented.
 │                                                                          │
 │  session:start          agent works        agent:end          scheduled  │
 │  ─────────────          ───────────        ─────────          ────────   │
-│  mem0 loader    ──►     SOUL + 180   ──►   auto-verify  ──►  memory      │
+│  mem0 loader    ──►     SOUL + 147   ──►   auto-verify  ──►  memory      │
 │  (recall into            skills + 7        + taste-summary  consolidation│
 │   fresh prompt)          MCP tools                              + sync    │
 │                                                                          │

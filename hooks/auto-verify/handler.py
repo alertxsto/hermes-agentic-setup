@@ -17,6 +17,7 @@ import os
 import re
 import time
 import logging
+import asyncio
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -29,6 +30,7 @@ COOLDOWN_FILE = Path.home() / ".hermes" / "hooks" / "auto-verify" / ".cooldown"
 LOG_DIR = Path.home() / ".hermes" / "hooks" / "auto-verify"
 LOG_FILE = LOG_DIR / "hook.log"
 
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     filename=str(LOG_FILE), level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -43,6 +45,12 @@ TASK_RE = re.compile(
 )
 CLAIM_RE = re.compile(r"\b(ok|done|selesai|beres|kelar|fixed|sukses)\b", re.IGNORECASE)
 SKIP_MSG_RE = re.compile(r"\b(update|upgrade|add|tambah|hapus|remove|sync|colok|config)\b", re.IGNORECASE)
+
+
+def _escape_markdown(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r'(?<!\\)([_*`\[])', r'\\\1', str(text))
 
 
 def _run(argv, cwd=None, timeout=8):
@@ -105,12 +113,12 @@ def verify():
         dirty = []
         for repo in repos:
             # sanitize: only simple names, never pass arbitrary strings to a shell
-            if not re.fullmatch(r"[A-Za-z0-9_.-]+", repo):
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", repo) or repo in (".", ".."):
                 logging.warning("skipping repo with unsafe name: %r", repo)
                 continue
             out = _run(["git", "status", "--short"], cwd=str(home / repo))
             if out:
-                dirty.append(f"{repo}: {len(out.splitlines())} dirty")
+                dirty.append(f"{_escape_markdown(repo)}: {len(out.splitlines())} dirty")
         checks.append(("warn", "📦 Repo dirty: " + "; ".join(dirty)) if dirty
                       else ("ok", "📦 Repo bersih"))
 
@@ -118,14 +126,15 @@ def verify():
     for name, host, port, dev_only in services:
         url = f"http://{host}:{port}/"
         code = _run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url, "--max-time", "3"])
+        esc_name = _escape_markdown(name)
         if code == "200":
-            checks.append(("ok", f"🌐 {name} UP"))
+            checks.append(("ok", f"🌐 {esc_name} UP"))
         elif dev_only:
             continue
         elif code:
-            checks.append(("warn", f"🌐 {name} HTTP {code}"))
+            checks.append(("warn", f"🌐 {esc_name} HTTP {code}"))
         else:
-            checks.append(("warn", f"🌐 {name} down (important)"))
+            checks.append(("warn", f"🌐 {esc_name} down (important)"))
 
     # 3. Real errors in the agent log, last 2h, noise filtered. Pure Python —
     #    no shell pipeline.
@@ -135,20 +144,21 @@ def verify():
         errs = []
         with log_path.open(encoding="utf-8", errors="ignore") as f:
             for line in f:
-                if not re.match(r"^\d{4}-\d{2}-\d{2}", line):
+                m = re.match(r"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})", line)
+                if not m:
                     continue  # only dated header lines
                 if "ERROR" not in line and "CRITICAL" not in line:
                     continue
                 if any(n in line for n in ("stream_error_clean", "stream ended", "INFO")):
                     continue
                 try:
-                    ts = datetime.fromisoformat(line[0:19].replace(" ", "T"))
+                    ts = datetime.fromisoformat(m.group(1).replace(" ", "T"))
                 except Exception:
                     continue
                 if ts >= cutoff:
                     errs.append(line.strip())
         if errs:
-            checks.append(("warn", "⚠️ Recent ERROR: " + " | ".join(e[:90] for e in errs[:2])))
+            checks.append(("warn", "⚠️ Recent ERROR: " + " | ".join(_escape_markdown(e[:90]) for e in errs[:2])))
         else:
             checks.append(("ok", "📋 Log bersih"))
     else:
@@ -172,12 +182,12 @@ async def handle(event_type: str, context: dict):
     if _in_cooldown():
         return
 
-    checks = verify()
+    checks = await asyncio.to_thread(verify)
     head = (message[:55] + "…") if len(message) > 55 else message
-    lines = [f"🧾 **Auto-Verify** · \"{head}\""]
+    lines = [f"🧾 **Auto-Verify** · \"{_escape_markdown(head)}\""]
     for status, text in checks:
         icon = "✅" if status == "ok" else ("⚠️" if status == "warn" else "❌")
-        lines.append(f"{icon} {text}")
+        lines.append(f"{icon} {_escape_markdown(text)}")
     verdict = "✅ aman" if all(s == "ok" for s, _ in checks) else "⚠️ ada yang perlu dicek"
     lines.append(f"**{verdict}**")
 

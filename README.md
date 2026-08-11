@@ -61,6 +61,8 @@ session:start → memory loads → agent works → claims done
 
 Full map: [`skills/index.md`](skills/index.md).
 
+> **Note:** [`skills/index.md`](skills/index.md) is a manifest of the LIVE skill library (`~/.hermes/skills`, 147 skills). The repository ships only core reference templates (e.g. `webreaper`), not every skill.
+
 ---
 
 ## Core components

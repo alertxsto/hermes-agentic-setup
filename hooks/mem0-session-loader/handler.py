@@ -16,7 +16,9 @@ Mechanism (verified 2026-08 against hermes-agent source):
 
 import json
 import os
+import re
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -81,14 +83,24 @@ def _log_load(session_id: str, memories: list) -> None:
 def _strip_old_recall(text: str) -> str:
     # Remove any prior recall block regardless of heading level (# or ##) so
     # repeated runs stay idempotent (never accumulate duplicates).
-    import re
-    # split into (pre, marker-body), then drop everything from the recall title
     marker_name = re.escape(RECALL_TITLE)
+    close_name = re.escape(MARK_CLOSE)
     pat = re.compile(
-        r"\n[#]+\s+" + marker_name + r"[\s\S]*?" + re.escape(MARK_CLOSE),
+        r"(?:^|\n)[#]+\s+" + marker_name + r"[\s\S]*?" + close_name,
         re.MULTILINE,
     )
     return pat.sub("", text)
+
+
+def _write_text_atomic(path: Path, content: str) -> None:
+    if _ATOMIC:
+        atomic_write_text(path, content, encoding="utf-8", tmp_prefix=".memrecall_")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, encoding="utf-8") as tf:
+            tf.write(content)
+            tmp_name = tf.name
+        os.replace(tmp_name, path)
 
 
 async def handle(event_type: str, context: dict):
@@ -137,11 +149,7 @@ async def handle(event_type: str, context: dict):
             tiny.append(MARK_CLOSE)
             new_content = new_content.rstrip("\n") + "\n" + "\n".join(tiny) + "\n"
 
-        if _ATOMIC:
-            atomic_write_text(MEMORY_MD, new_content, encoding="utf-8",
-                              tmp_prefix=".memrecall_")
-        else:
-            MEMORY_MD.write_text(new_content, encoding="utf-8")
+        _write_text_atomic(MEMORY_MD, new_content)
         _log_load(session_id, recall)
 
     except Exception as e:

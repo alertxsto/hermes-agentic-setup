@@ -3,6 +3,8 @@
 The agent's procedural knowledge, loaded on demand when a task matches. Numbers
 below are counted from the live filesystem (`~/.hermes/skills`), not guessed.
 
+> **Note:** `skills/index.md` is a manifest of the LIVE skill library (`~/.hermes/skills`, 147 skills). The repository ships only core reference templates (e.g. `webreaper`), not every skill.
+
 **Total: 147 skills.**
 
 ## 🏆 Power skills (what makes this setup distinctive)
