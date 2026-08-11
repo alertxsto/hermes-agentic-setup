@@ -6,8 +6,8 @@ is a closed loop of act → record → review → improve.
 ```
    ACT ──► RECORD ──► REVIEW ──► IMPROVE ──► (next ACT is smarter)
     │         │          │           │
- done real   sessions   a daily     patch skills /
-  work       + git      cron reads  note gaps
+ done real   sessions   scheduled   patches skills /
+  work       + git      review      note gaps
                        the record
 ```
 
@@ -21,8 +21,8 @@ material (git history, session transcripts) that will be reviewed later.
 
 Both are ground truth, not imagination.
 
-## Step 3 — REVIEW (the daily briefing cron)
-Every morning a cron reads the last 24h:
+## Step 3 — REVIEW (a scheduled review)
+A scheduled review reads the last 24h:
 1. Telemetry collector → `git log` per repo, dirty WIP, service status.
 2. Session search → what was actually worked on.
 3. Skill scan → what the library has and where it's thin.
@@ -47,8 +47,8 @@ The briefing isn't just advisory — it's **allowed to act**. It can:
 - **Update pattern docs** — encode today's lesson for tomorrow.
 - **Fix tooling** — e.g. stale repo lists in the telemetry collector.
 
-This is a **verified, real loop**: briefings have autonomously updated the cron
-operations skill and deduplicated sections.
+This is a **verified, real loop**: scheduled reviews have autonomously updated
+the operations skill and deduplicated sections.
 
 ## Why it matters
 

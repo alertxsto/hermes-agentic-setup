@@ -104,18 +104,24 @@ verify.** A claim ("done", "ok") is not evidence. This setup enforces it
 *architecturally*, not just by asking the model to be honest.
 
 [`hooks/auto-verify/handler.py`](hooks/auto-verify/handler.py) fires on
-`agent:end` and runs deterministic, cheap checks when the agent says it finished
-a real task:
+`agent:end`. It only acts when **four guards pass** — otherwise it does nothing
+(no spam):
 
-1. **Task detection** — only fire when the user's message looks like real work
-   (`beresin`, `fix`, `build`, `deploy`…), not casual chat.
-2. **Claim detection** — only when the reply actually says ok/done/selesai/fixed.
-3. **Verification** — check git cleanliness, service HTTP status, and a recent
-   error scan of the agent log.
-4. **Verdict** — post the result to the owner.
+1. **Task detection** — the user's message looks like real work (`beresin`,
+   `fix`, `build`, `deploy`…), not casual chat.
+2. **Claim detection** — the agent's reply actually says ok/done/selesai/fixed.
+3. **Length guard** — the reply is substantial (≥80 chars), not a bare "ok".
+4. **Cooldown** — no more than one verdict per 5 minutes.
 
-Noise controls: a **cooldown** (max once per 5 min) and **dev-only tolerance**
-(services not meant to run 24/7 are skipped when down, so no false alarm).
+When all four pass, it runs three deterministic checks:
+
+- **Repo cleanliness** — `git status --short` on active repos.
+- **Service health** — `curl` HTTP status on listed services (dev-only services
+  skipped when down — expected, not an alarm).
+- **Recent errors** — grep the agent log for `ERROR`/`CRITICAL` in the last 2h,
+  with noise filtered (`INFO`, clean-close, bare traceback lines).
+
+Then it posts a verdict:
 
 ```txt
 🧾 Auto-Verify · "gas beresin bug css di site-checker"
@@ -126,7 +132,8 @@ Noise controls: a **cooldown** (max once per 5 min) and **dev-only tolerance**
 **⚠️ ada yang perlu dicek**
 ```
 
-Deterministic + automatic = it works regardless of which model is running.
+Deterministic + automatic = it works regardless of which model is running. This
+is the architectural guarantee behind the SOUL's "verify before claiming" rule.
 
 > [`hooks/auto-verify/`](hooks/auto-verify/) · [`patterns/verification.md`](patterns/verification.md)
 

@@ -33,9 +33,23 @@ The handler is a Python file next to `HOOK.yaml` with an async entry point:
 ```python
 async def handle(event_type: str, context: dict):
     # event_type: one of the registered events
-    # context:    dict with message / response / user info
+    # context:    dict — what the gateway passes to the handler
     ...
 ```
+
+### What `context` contains
+
+The exact keys depend on the event, but the mech ones across this setup:
+
+| Key | Present for | Meaning |
+|---|---|---|
+| `user_id` | `session:start`, `agent:end` | who triggered it |
+| `session_id` | `session:start` | which session |
+| `message` | `agent:end` | the user's message |
+| `response` | `agent:end` | the agent's reply |
+
+The mem0 loader uses `user_id` (to query the right memories) and `session_id`;
+auto-verify uses `message` + `response` (for task/claim detection).
 
 ## Wiring a new hook
 
