@@ -1,0 +1,4 @@
+name: taste-summary
+description: Show taste + confidence summary like Command Code after each task completes
+events:
+  - agent:end

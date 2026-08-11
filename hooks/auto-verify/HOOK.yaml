@@ -1,0 +1,4 @@
+name: auto-verify
+description: Auto-verify task completion (repo clean, service up, log scan) and post verdict to Telegram
+events:
+  - agent:end

@@ -1,0 +1,5 @@
+name: mem0-session-loader
+description: Load relevant Mem0 memories on new session start
+events:
+  - session:start
+  - session:reset

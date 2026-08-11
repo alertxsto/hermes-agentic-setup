@@ -1,0 +1,28 @@
+# Secrets & personal data — NEVER commit
+.env
+*.env
+*key*
+*.pem
+*.p12
+
+# Hermes runtime (never commit live state)
+config.yaml
+SOUL.md
+USER.md
+MEMORY.md
+memories/
+cron/output/
+logs/
+*.cooldown
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
