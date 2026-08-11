@@ -22,11 +22,25 @@ discarded by the gateway (`emit()` swallows results), so injection *must* happen
 by writing state to disk that `load_from_disk()` picks up — not by returning
 data. This is the subtle bit that makes the pattern work.
 
+**Atomic write (race-safety):** `MEMORY.md` is *also* written by Hermes' built-in
+memory tool, so this hook reuses Hermes' own `atomic_write_text` (temp file +
+fsync + atomic rename) instead of a bare `write_text`. That prevents a
+lost-update / partial-write race when both writers hit the file near-simultaneously.
+
 ## Outcome
 
 Each session starts with a `# Mem0 Recall (auto, session start)` section already
 in context — the agent has working knowledge of past work without manual note
 hand-off.
+
+## Note: native Hermes memory
+
+Hermes ships built-in memory providers (`hermes memory`: mem0, byterover, …) and
+an auto-curator for skills. **Prefer the native path where it fits.** This hook
+exists for the specific case of *injecting a semantic recall block into
+`MEMORY.md` at `session:start`*; if your Hermes version already auto-injects
+provider memory into the system prompt, use that and drop this hook to avoid
+duplicate writes. Check `hermes memory status` for what your version does.
 
 ## Companion: mem0 auto-cleanup
 

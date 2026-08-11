@@ -45,7 +45,15 @@ data back — it must **write to disk** (`MEMORY.md`). Then
 `MemoryStore.load_from_disk()` snapshots that block into the fresh prompt.
 
 That's why the mem0 loader writes a recall block *into the file* rather than
-returning anything. See `hooks/mem0-session-loader/handler.py`.
+returning anything. It uses Hermes' **atomic writer** (`atomic_write_text`) so it
+never races the built-in memory tool that also writes `MEMORY.md`. See
+`hooks/mem0-session-loader/handler.py`.
+
+> **Native vs custom:** Hermes already ships memory providers (`hermes memory`)
+> and an auto-curator. This custom hook covers the specific case of injecting a
+> semantic recall block at `session:start`. If your Hermes version auto-injects
+> provider memory natively, prefer that and drop the hook to avoid duplicate
+> writes. See the hook README.
 
 ## The three goals
 
