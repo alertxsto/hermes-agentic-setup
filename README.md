@@ -212,6 +212,31 @@ Details in [`examples/task-flow.md`](examples/task-flow.md).
 
 ---
 
+## ⚠️ Compatibility & honesty
+
+This is a **single-person, single-environment** setup — not a community-validated
+framework. Before adopting it, read this:
+
+- **Hermes version coupling.** The hook API touched here (`session:start`,
+  `agent:end`, discarded hook return values) is an *implementation detail* that
+  can change between Hermes releases. This was built against a specific running
+  version. **Verify against your Hermes version before relying on it.** If a
+  future Hermes ships native equivalents (e.g. built-in memory auto-injection or
+  automatic skill curation), prefer those over these custom hooks to avoid
+  duplicate writes / race conditions.
+- **Verification depth.** The auto-verify hook is a **smoke test** (git status,
+  HTTP status, recent-error scan) — deliberately cheap and deterministic. It is
+  *not* functional/visual verification. It catches "agent said done but repo
+  dirty / service down / error logged", not "agent said done but the logic is
+  subtly wrong." Treat it as a backstop, not proof of correctness.
+- **Scope.** Tested by one person on one machine. "Production-grade" here means
+  *it has run real daily work reliably*, not that it's battle-tested at scale.
+
+> Honesty is the point of this repo. That includes being honest about its own
+> limits.
+
+---
+
 ## 📜 License
 
 [Apache-2.0](LICENSE)

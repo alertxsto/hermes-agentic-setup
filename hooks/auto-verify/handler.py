@@ -1,26 +1,38 @@
 #!/usr/bin/env python3
-"""Auto-verify hook (optimized) — after a REAL task completes, run lightweight
-verification (git clean, service up, real-error scan) and post a verdict to Telegram.
+"""Auto-verify hook — after a REAL task completes, run cheap deterministic checks
+(git clean, service up, recent-error scan) and post a verdict to Telegram.
 
-Fires only when:
-  - user msg looks like a real build/fix/deploy task (not casual chat)
-  - response actually CLAIMS completion (ok/done/beres/fixed)
-  - a cooldown window has passed (no spam)
-Verification is deterministic and cheap (git status + curl + grep), scoped to THIS
-user's repos/services. The verdict distinguishes verified-facts from agent claims.
+Security & reliability notes:
+  - Uses shell=False everywhere (no command injection from parsed repo/service
+    names). No `shell=True`.
+  - Never silently swallows failures: every exception is logged to a hook log
+    file so a dead hook is visible, not silent.
+  - Repo/service list is read from the telemetry collector; generic defaults are
+    used only as a last resort (no hardcoded personal project names).
+
+Fires only when all four guards pass: real task + completion claim + substantial
+reply + cooldown window open.
 """
 import os
 import re
 import time
-import subprocess
+import logging
 from pathlib import Path
+from datetime import datetime, timedelta
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_HOME_CHANNEL", "")
 
 MIN_RESPONSE_LEN = 80
-COOLDOWN_S = 300          # don't fire more than once per 5 min
+COOLDOWN_S = 300
 COOLDOWN_FILE = Path.home() / ".hermes" / "hooks" / "auto-verify" / ".cooldown"
+LOG_DIR = Path.home() / ".hermes" / "hooks" / "auto-verify"
+LOG_FILE = LOG_DIR / "hook.log"
+
+logging.basicConfig(
+    filename=str(LOG_FILE), level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 # Real-task signals — conservative, excludes ambiguous everyday words.
 TASK_RE = re.compile(
@@ -30,16 +42,19 @@ TASK_RE = re.compile(
     re.IGNORECASE,
 )
 CLAIM_RE = re.compile(r"\b(ok|done|selesai|beres|kelar|fixed|sukses)\b", re.IGNORECASE)
-
-# Ignore task words that leak from normal conversation.
 SKIP_MSG_RE = re.compile(r"\b(update|upgrade|add|tambah|hapus|remove|sync|colok|config)\b", re.IGNORECASE)
 
 
-def _run(cmd, timeout=8):
+def _run(argv, cwd=None, timeout=8):
+    """Run a command with NO shell (argv list). Returns stdout or '' on failure.
+    Failures are logged, not swallowed."""
+    import subprocess
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(argv, shell=False, capture_output=True, text=True,
+                           timeout=timeout, cwd=cwd)
         return r.stdout.strip()
-    except Exception:
+    except Exception as e:
+        logging.warning("command failed: %r — %s", argv, e)
         return ""
 
 
@@ -52,91 +67,99 @@ def _in_cooldown():
         COOLDOWN_FILE.parent.mkdir(parents=True, exist_ok=True)
         COOLDOWN_FILE.write_text(str(time.time()))
         return False
-    except Exception:
-        return False
+    except Exception as e:
+        logging.warning("cooldown check failed: %s", e)
+        return False  # fail open: don't block a verification on cooldown errors
 
 
 def _collector():
-    """Return (repos, services) parsed from work_prep_collector.sh — the single
-    source of truth for active repos and dev services this user runs.
-    services is a list of (name, host, port, dev_only)."""
+    """Parse (repos, services) from the telemetry collector — single source of
+    truth. Returns generic defaults if the script is missing/unparseable."""
     script = Path.home() / ".hermes" / "scripts" / "work_prep_collector.sh"
-    repos = ["site-checker", "the-app"]  # safe fallback
-    services = []  # list of (name, host, port, dev_only)
+    repos = []       # empty -> no repo checks (graceful, not false positives)
+    services = []    # list of (name, host, port, dev_only)
     try:
         text = script.read_text()
-        # ACTIVE_REPOS=( "a" "b" ... )
         m = re.search(r"ACTIVE_REPOS=\((.*?)\)", text, re.S)
         if m:
             parsed = re.findall(r'"([^"]+)"', m.group(1))
-            if parsed:
-                repos = parsed
-        # check_port "name" "http://host:PORT/..."  [# dev-only]
+            repos = parsed
         for line in re.findall(r'check_port\s+"([^"]+)"\s+"([^"]+)"(.*)$', text, re.M):
             nm, url, tail = line
             pm = re.search(r"localhost:(\d+)", url)
             if pm:
-                dev_only = "dev-only" in tail
-                services.append((nm, "localhost", int(pm.group(1)), dev_only))
-    except Exception:
-        pass
+                services.append((nm, "127.0.0.1", int(pm.group(1)), "dev-only" in tail))
+    except Exception as e:
+        logging.warning("collector parse failed: %s", e)
     return repos, services
 
 
 def verify():
     """Return list of (status, msg). status in {'ok','warn','fail'}."""
     checks = []
-    home = str(Path.home())
+    home = Path.home()
     repos, services = _collector()
 
-    # 1. Repo cleanliness — from collector's ACTIVE_REPOS.
-    dirty_repos = []
-    for repo in repos:
-        out = _run(f"cd {home}/{repo} 2>/dev/null && git status --short 2>/dev/null | head -8")
-        if out:
-            dirty_repos.append(f"{repo}: {len(out.splitlines())} dirty")
-    checks.append(("warn", "📦 Repo dirty: " + "; ".join(dirty_repos)) if dirty_repos
-                  else ("ok", "📦 Repo bersih"))
+    # 1. Repo cleanliness. Empty repos -> skip (no false positives on a fork).
+    if repos:
+        dirty = []
+        for repo in repos:
+            # sanitize: only simple names, never pass arbitrary strings to a shell
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", repo):
+                logging.warning("skipping repo with unsafe name: %r", repo)
+                continue
+            out = _run(["git", "status", "--short"], cwd=str(home / repo))
+            if out:
+                dirty.append(f"{repo}: {len(out.splitlines())} dirty")
+        checks.append(("warn", "📦 Repo dirty: " + "; ".join(dirty)) if dirty
+                      else ("ok", "📦 Repo bersih"))
 
-    # 2. Dev services — from collector's check_port entries.
-    #    dev-only services (marked `# dev-only`) are NOT expected to run 24/7:
-    #    when down we skip them (no false alarm); when up we note them.
-    if services:
-        for name, host, port, dev_only in services:
-            code = _run(f"curl -s -o /dev/null -w '%{{http_code}}' http://{host}:{port}/ --max-time 3")
-            if code == "200":
-                checks.append(("ok", f"🌐 {name} UP"))
-            elif dev_only:
-                continue  # normal for dev-only to be down — don't alarm
-            elif code:
-                checks.append(("warn", f"🌐 {name} HTTP {code}"))
-            else:
-                checks.append(("warn", f"🌐 {name} down (important)"))
-    else:
-        code = _run("curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/ --max-time 3")
-        checks.append(("ok", "🌐 site-checker UP") if code == "200"
-                      else (f"⚠️ site-checker HTTP {code or 'down'}"))
+    # 2. Service health. dev-only services skipped when down (expected).
+    for name, host, port, dev_only in services:
+        url = f"http://{host}:{port}/"
+        code = _run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url, "--max-time", "3"])
+        if code == "200":
+            checks.append(("ok", f"🌐 {name} UP"))
+        elif dev_only:
+            continue
+        elif code:
+            checks.append(("warn", f"🌐 {name} HTTP {code}"))
+        else:
+            checks.append(("warn", f"🌐 {name} down (important)"))
 
-    # 3. Real errors only, recent (last 2h). Use a timestamp-bounded grep: only
-    #    lines whose leading ISO timestamp is >= 2h ago. Bare traceback continuation
-    #    lines (no timestamp) are ignored — we only report the dated ERROR header.
-    err = _run(
-        f"grep -E 'ERROR|CRITICAL' {home}/.hermes/logs/agent.log 2>/dev/null "
-        f"| grep -viE 'stream_error_clean|stream ended|INFO' "
-        f"| awk -v cutoff=\"$(date -d '2 hours ago' '+%Y-%m-%d %H:%M:%S')\" "
-        f"'/^[0-9]{4}-[0-9]{2}-[0-9]{2}/ && $0 >= cutoff' | tail -3"
-    )
-    if err:
-        excerpt = " | ".join(l[:90] for l in err.splitlines()[:2])
-        checks.append(("warn", f"⚠️ Recent ERROR: {excerpt}"))
+    # 3. Real errors in the agent log, last 2h, noise filtered. Pure Python —
+    #    no shell pipeline.
+    log_path = home / ".hermes" / "logs" / "agent.log"
+    if log_path.exists():
+        cutoff = datetime.now() - timedelta(hours=2)
+        errs = []
+        with log_path.open(encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if not re.match(r"^\d{4}-\d{2}-\d{2}", line):
+                    continue  # only dated header lines
+                if "ERROR" not in line and "CRITICAL" not in line:
+                    continue
+                if any(n in line for n in ("stream_error_clean", "stream ended", "INFO")):
+                    continue
+                try:
+                    ts = datetime.fromisoformat(line[0:19].replace(" ", "T"))
+                except Exception:
+                    continue
+                if ts >= cutoff:
+                    errs.append(line.strip())
+        if errs:
+            checks.append(("warn", "⚠️ Recent ERROR: " + " | ".join(e[:90] for e in errs[:2])))
+        else:
+            checks.append(("ok", "📋 Log bersih"))
     else:
-        checks.append(("ok", "📋 Log bersih"))
+        checks.append(("ok", "📋 (no agent log)"))
 
     return checks
 
 
 async def handle(event_type: str, context: dict):
     if not BOT_TOKEN or not CHAT_ID:
+        logging.warning("auto-verify skipped: BOT_TOKEN/CHAT_ID not set")
         return
     message = (context.get("message") or "").strip()
     response = (context.get("response") or "").strip()
@@ -147,7 +170,7 @@ async def handle(event_type: str, context: dict):
     if not CLAIM_RE.search(response):
         return
     if _in_cooldown():
-        return  # recently verified, skip to avoid spam
+        return
 
     checks = verify()
     head = (message[:55] + "…") if len(message) > 55 else message
@@ -161,10 +184,12 @@ async def handle(event_type: str, context: dict):
     try:
         import httpx
         async with httpx.AsyncClient() as client:
-            await client.post(
+            r = await client.post(
                 f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
                 json={"chat_id": CHAT_ID, "text": "\n".join(lines), "parse_mode": "Markdown"},
                 timeout=8,
             )
-    except Exception:
-        pass
+            if r.status_code != 200:
+                logging.warning("telegram send failed: HTTP %s", r.status_code)
+    except Exception as e:
+        logging.error("telegram send failed: %s", e)
