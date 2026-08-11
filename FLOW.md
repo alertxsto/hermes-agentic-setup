@@ -76,7 +76,7 @@ One real workflow the agent runs: coordinate Agy agents
 PLAN (orchestrator --print → plan.md) → user ACC → EXECUTE → verify mandiri
 ```
 
-### Example — SkillArena AI-judge
+### Example — AI website judging
 `software-development/ai-website-judge` + `devops/skillarena-judge-ops`: a
 Playwright crawler + vision-LLM judges websites automatically. This is a
 full multi-stage pipeline (SPA discovery, per-page crawl, post-auth sweep,

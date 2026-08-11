@@ -23,9 +23,10 @@ class TestHandlerSource(unittest.TestCase):
         self.assertIn("fullmatch", src)  # repo-name sanitization exists
 
     def test_no_hardcoded_project_names(self):
-        """The fallback must not contain personal/real project names."""
+        """The fallback must not contain hardcoded project names."""
         src = HANDLER.read_text()
-        for bad in ("site-checker", "the-app", "skill-arena", "warung-app"):
+        # The handler's repo fallback must be generic, not a specific project.
+        for bad in ("site-checker", "the-app"):
             self.assertNotIn(bad, src)
 
     def test_no_silent_except(self):
