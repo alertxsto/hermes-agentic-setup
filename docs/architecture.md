@@ -38,9 +38,9 @@ stateless assistant and a growing partner.
 
 ## Security posture
 
-- **Secrets never in repo** — `.env`, `config.yaml`, memories, session content
-  all kept out. This showcase repo carries only documented patterns.
+- **Config excluded from source** — live config, env, and session data are kept
+  out of the repo; what ships is documented, adaptable patterns.
 - **Verification before claims** — auto-verify enforces honesty.
 - **Conservative memory cleanup** — never deletes good facts, only junk.
-- **Self-hosted first** — mem0, 9Router local, OpenRouter avoided when a local
-  option exists.
+- **Self-hosted first** — local-first tooling preferred when a viable option
+  exists.

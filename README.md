@@ -1,17 +1,13 @@
 # 🤖 Hermes Agentic Setup
 
-> **A production-grade personal AI agent that keeps getting smarter.**  
+> **A production-grade, self-improving AI agent.**  
 > Architecture, hooks, and self-improving workflows for a long-lived coding/ops
 > agent built on [Hermes Agent](https://hermes-agent.nousresearch.com/docs) by Nous Research.
 
-This repo is a **curated showcase** of how a Hermes agent is configured for
-real, long-term use: a defined personality, semantic memory that survives across
-sessions, verification hooks that stop it from lying about "done", and a daily
-briefing loop that actually patches its own skills.
-
-> ⚠️ **No secrets here.** This is the *structure and lessons* — all API keys,
-> config files, personal data, and session content are excluded. Everything is a
-> documented pattern you can adapt, not the raw `.hermes/` directory.
+This repo is a **curated showcase** of how a production Hermes agent is
+architected for real, long-term use: a defined operating system, semantic memory
+that survives across sessions, verification hooks that enforce honest "done"
+claims, and a daily briefing loop that patches its own skills.
 
 ---
 
