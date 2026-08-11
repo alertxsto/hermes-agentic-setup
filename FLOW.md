@@ -24,7 +24,7 @@ scripts), not invented.
 
 | Layer | What it really is |
 |---|---|
-| **Skills** | **180 skills** across **15 categories** (autonomous-ai-agents, creative, devops, email, firecrawl, github, media, mlops, note-taking, productivity, research, smart-home, social-media, software-development, taste) |
+| **Skills** | **147 skills** across 16 directories (root + 15 categories), incl. 6 security skills, design/taste suite, orchestration, mem0 |
 | **Memory** | mem0 (PostgreSQL + pgvector, port 5433) + built-in `MEMORY.md`/`USER.md` |
 | **MCP servers** | **7 enabled**: `github`, `chrome-devtools`, `postgres`, `firecrawl`, `memory`, `context7`, `sequential-thinking` |
 | **Hooks** | `mem0-session-loader` (session:start), `auto-verify` + `taste-summary` (agent:end) |
@@ -55,7 +55,7 @@ built-in memory tool on the same file.
 
 ## Phase 1 — Act: the agent works
 
-**Driving data:** [`soul/asep.md`](soul/asep.md) (SOUL) + **180 skills** + **7 MCP tools**.
+**Driving data:** [`soul/asep.md`](soul/asep.md) (SOUL) + **147 skills** + **7 MCP tools**.
 
 The SOUL defines *who* the agent is and *how* it works (plan big work first,
 verify before claiming, honest on failure, kill specific processes only, respect
@@ -66,7 +66,7 @@ running services). Skills give it *how to do things*; MCP tools give it *hands*.
 - **7 MCP servers** extend it: GitHub (repos/PRs), chrome-devtools (browser),
   postgres (SQL), firecrawl (web scrape/search), memory (knowledge graph),
   context7 (up-to-date docs), sequential-thinking (structured reasoning).
-- **180 skills** are loaded on demand when relevant — the agent scans them before
+- **147 skills** are loaded on demand when relevant — the agent scans them before
   acting and loads the matching one.
 
 ### Example — orchestrated coding (agy)

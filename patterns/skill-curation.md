@@ -16,7 +16,7 @@ skill and move unique references under it. Track the merge so historical links
 keep working.
 
 Example (a real consolidation): **163 overlapping skills → 146**, then further
-curation to ~180 as new class-level skills were added, by merging 11 groups:
+curation to 147 as new class-level skills were added, by merging 11 groups:
 - Expo/React Native: 6 → 1 umbrella (`expo-react-native-build`) with 8 references
 - Cron operations: 2 → 1
 - Next.js self-hosting: 4 → 1

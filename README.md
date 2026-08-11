@@ -61,6 +61,29 @@ The full text is in [`soul/asep.md`](soul/asep.md). Its structure:
 
 ---
 
+## 🧰 Capabilities — what this agent can actually do
+
+This isn't a toy. The agent carries a real tool + knowledge surface:
+
+**7 MCP servers** (real-time external tools):
+`github` (repos/PRs) · `chrome-devtools` (browser automation) · `postgres` (SQL) ·
+`firecrawl` (web scrape/search) · `memory` (knowledge graph) · `context7`
+(up-to-date docs) · `sequential-thinking` (structured reasoning).
+
+**147 skills**, including standout workflows:
+- **AI website judging** — a Playwright crawler + vision-LLM auto-judges websites
+  (SPA discovery, post-auth sweep, mobile routes). A self-hosted product.
+- **Agy orchestration** — PLAN → approve → parallel EXECUTE → verify, multi-agent.
+- **Unlimited semantic memory** (mem0) — beyond Hermes' built-in cap.
+- **6-skill security suite** — intrusion logs, API testing, MCP-poisoning audit,
+  CT-logs, prompt-injection detection.
+- **Design/taste system** — ships UI that doesn't look AI-generated.
+- **Multi-crawler deep research** — real research projects into categorized output.
+
+Full map: [`skills/index.md`](skills/index.md).
+
+---
+
 ## 2 · Remembering — the memory flow
 
 A fresh session has a **frozen system prompt** — it can't remember yesterday.
@@ -175,9 +198,10 @@ inherits the previous ones, so the agent compounds.
 Procedural knowledge lives as **skills**; they're loaded when relevant. The
 library is actively curated:
 
-- **~180 skills**, curated across 15 categories (autonomous-ai-agents, creative,
-  devops, github, mlops, security, software-development, taste, and more),
-  consolidated over time by merging overlapping groups into class-level umbrellas.
+- **147 skills**, curated across 16 directories (root + 15 categories —
+  autonomous-ai-agents, creative, devops, github, mlops, software-development,
+  taste, and more), including a 6-skill security suite and a design/taste system.
+  Consolidated over time by merging overlapping groups into class-level umbrellas.
 - **Rule:** a skill captures a *recurring class of work*, not a one-off. Skills
   born from a single whim are clutter and get removed.
 - A skill is **patched immediately** when it's found outdated or wrong — skills
