@@ -204,6 +204,7 @@ Details in [`examples/task-flow.md`](examples/task-flow.md).
 
 ## 🧰 Reference
 
+- [`FLOW.md`](FLOW.md) — the complete lifecycle + use cases (start here)
 - [`examples/hook-event-map.md`](examples/hook-event-map.md) — all events & hooks
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/lessons.md`](docs/lessons.md) — hard-won pitfalls
