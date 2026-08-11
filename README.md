@@ -50,12 +50,40 @@ claims, and a daily briefing loop that patches its own skills.
 
 ```
 hermes-agentic-setup/
-├── soul/            # the agent's identity & operating principles (SOUL.md pattern)
-├── hooks/           # event-driven extensions (auto-verify, mem0-loader, taste-summary)
-├── cron/            # scheduled self-improving workflows (daily briefing, memory cleanup)
-├── patterns/        # reusable recipes (skill curation, model routing)
-├── skills/          # how the skill library is curated & organized
-└── docs/            # architecture + lessons learned
+├── README.md            # architecture + showcase overview
+├── LICENSE              # Apache-2.0
+├── .gitignore
+├── soul/                # the agent's identity & operating principles
+│   └── asep.md
+├── hooks/               # event-driven extensions
+│   ├── auto-verify/         # anti-overclaim verification (handler + docs)
+│   ├── mem0-session-loader/ # semantic memory recall
+│   └── taste-summary/       # taste + confidence summary
+├── cron/                # scheduled self-improving workflows
+│   ├── daily-briefing.md
+│   ├── mem0-auto-cleanup.md
+│   └── scripts/             # REAL, adaptable scripts
+│       ├── work_prep_collector.sh
+│       └── mem0_auto_cleanup.py
+├── patterns/            # reusable recipes
+│   ├── skill-curation.md
+│   ├── model-routing.md
+│   ├── memory.md
+│   ├── verification.md
+│   └── self-improving.md
+├── examples/            # end-to-end walkthroughs
+│   ├── task-flow.md
+│   └── hook-event-map.md
+├── skills/              # how the skill library is curated
+│   └── index.md
+├── docs/                # architecture + lessons + setup
+│   ├── architecture.md
+│   ├── lessons.md
+│   └── setup-guide.md
+└── TEMPLATES/           # starting points for your own setup
+    ├── SOUL.TEMPLATE.md
+    ├── HOOK.TEMPLATE.yaml
+    └── CRON.TEMPLATE.md
 ```
 
 ---
@@ -78,8 +106,12 @@ hermes-agentic-setup/
 Each folder is self-documented. Start with:
 
 - [`docs/architecture.md`](docs/architecture.md) — how the pieces fit
+- [`docs/setup-guide.md`](docs/setup-guide.md) — step-by-step to build your own
+- [`examples/task-flow.md`](examples/task-flow.md) — what happens end-to-end
 - [`soul/asep.md`](soul/asep.md) — an example agent identity
 - [`hooks/auto-verify/`](hooks/auto-verify/) — a ready-to-adapt verification hook
+- [`cron/scripts/`](cron/scripts/) — real, adaptable collector + cleanup scripts
+- [`TEMPLATES/`](TEMPLATES/) — starting points (SOUL, HOOK, CRON)
 - [`docs/lessons.md`](docs/lessons.md) — hard-won pitfalls
 
 ---

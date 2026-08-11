@@ -1,0 +1,6 @@
+# Hook template — create at ~/.hermes/hooks/<name>/
+name: my-hook
+description: What this hook does
+events:
+  - agent:end
+# Valid events include: session:start, session:reset, agent:end, agent:start
