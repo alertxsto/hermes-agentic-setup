@@ -89,7 +89,11 @@ mobile routes, budget).
 **What runs:** [`hooks/auto-verify/handler.py`](hooks/auto-verify/handler.py) +
 [`hooks/taste-summary/`](hooks/taste-summary/).
 
-The auto-verify hook only fires when **four guards** pass — otherwise silent:
+The auto-verify hook is **adaptive**: it auto-discovers projects (git repos on
+disk + the collector's services), detects which project(s) the task message
+references, and verifies only those — plus a concise overall (repo clean,
+service up, recent-error scan). It only fires when **four guards** pass —
+otherwise silent:
 
 | Guard | Checks |
 |---|---|
@@ -98,8 +102,10 @@ The auto-verify hook only fires when **four guards** pass — otherwise silent:
 | 3. Length | reply ≥80 chars |
 | 4. Cooldown | ≤1 check per 5 min |
 
-Then **three deterministic checks**: repo clean? (`git status`), services up?
-(`curl` HTTP), errors in log? (`grep ERROR` last 2h). Posts a verdict:
+Then, **per detected project**: repo clean? (`git status`) + service up?
+(`curl` HTTP). Plus a concise overall (recent-error log scan, noise-filtered).
+Backed by **real behavior tests** (offline, deterministic — see
+[`tests/`](tests/)).
 
 ```txt
 🧾 Auto-Verify · "gas beresin bug css di site-checker"
