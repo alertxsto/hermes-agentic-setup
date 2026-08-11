@@ -192,6 +192,62 @@ owner: "gas beresin bug css di site-checker"
 
 ---
 
+## Phase 4 — Scheduled & background workflows
+
+Beyond the interactive loop, the agent runs **8 scheduled jobs** that keep
+memory, backups, and the environment healthy. All are `no-agent` script jobs
+(cheap, deterministic stdout) except the daily briefing (agent-driven).
+
+| # | Job | Schedule | Deliver | What it does |
+|---|---|---|---|---|
+| 1 | **Daily Briefing** | 07:00 daily | telegram | agent-driven self-improving review (see Phase 3) |
+| 2 | **Memory Consolidation** | every 6h | local | `consolidate-then-export.sh` → run consolidation, export to GitHub |
+| 3 | **Session Archive** | 02:00 daily | local | archive sessions >30 days, purge archives >90 days |
+| 4 | **Git Sync Hermes Config** | every 60m | local | `hermes-backup-sync.sh` → sync `.hermes` config to the backup repo |
+| 5 | **OSS Good First Issue Hunter** | 08:00 daily | telegram | `oss_issue_hunter.py` → find good-first-issues via GitHub API + web |
+| 6 | **Power & Cost Monitor** | every 60m | local | `power_monitor.py` → power draw + PLN cost, log JSONL |
+| 7 | **Weekly Power Cost Summary** | Mon 09:00 | telegram | `power_weekly_summary.py` → weekly avg + Telegram summary |
+| 8 | **Mem0 Auto Cleanup** | 04:00 daily | local | `mem0_auto_cleanup.py` → conservative dedup / noise / secret scrub |
+
+### Supporting scripts (not scheduled, run on demand)
+
+| Script | Purpose |
+|---|---|
+| `work_prep_collector.sh` | ground-truth telemetry: git log 24h, dirty WIP, service status |
+| `system-monitor.sh` | power/CPU/memory/disk/network report |
+| `export-memory-to-md.sh` | export memory store to a snapshot dir in the backup repo |
+| `fetch_yt_transcript.py` | pull a YouTube transcript and store it in mem0 |
+| `mem0_client.py` | the mem0 client shared across scripts |
+
+### Use case J — the memory health loop (jobs 2 + 8)
+```
+Memory Consolidation (6h)  → consolidate + export memory to GitHub backup
+Mem0 Auto Cleanup (04:00)  → remove duplicates/noise/leaked secrets
+  ──► memory stays fresh, deduped, and backed up — without manual work.
+```
+
+### Use case K — the environment health loop (jobs 6 + 7)
+```
+Power & Cost Monitor (60m) → continuous power/cost JSONL log
+Weekly Power Summary (Mon) → human-readable weekly cost to Telegram
+  ──► the owner sees cost trends and anomalies automatically.
+```
+
+### Use case L — OSS contribution hunting (job 5)
+```
+OSS Good First Issue Hunter (08:00) → curated good-first-issues sent to Telegram
+  ──► the owner reviews over coffee and picks one to contribute to.
+```
+
+### Use case M — backup & archive discipline (jobs 3 + 4)
+```
+Git Sync Hermes Config (60m) → config always backed up to the git repo
+Session Archive (02:00)      → old sessions archived, stale ones purged
+  ──► nothing is lost, and the working store never bloats.
+```
+
+---
+
 ## What can go wrong (and where it's caught)
 
 | Failure mode | Caught at |
@@ -213,6 +269,7 @@ owner: "gas beresin bug css di site-checker"
 | 1. Act | [`soul/asep.md`](soul/asep.md), [`skills/index.md`](skills/index.md) | SOUL + skills |
 | 2. Verify | [`patterns/verification.md`](patterns/verification.md) | `hooks/auto-verify/handler.py` |
 | 3. Improve | [`patterns/self-improving.md`](patterns/self-improving.md) | scheduled review |
+| 4. Background | — | 8 cron jobs + scripts in `~/.hermes/scripts/` |
 
 See also: [`examples/task-flow.md`](examples/task-flow.md),
 [`examples/hook-event-map.md`](examples/hook-event-map.md),
