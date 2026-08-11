@@ -55,7 +55,3 @@ operations skill and deduplicated sections.
 > Most "agents" are stateless: every session starts from zero. The
 > self-improving loop makes each session the *inheritor* of every previous one.
 > That compounding is the difference between a tool and a partner.
-
-## See also
-- `cron/daily-briefing.md` — the workflow
-- `cron/scripts/work_prep_collector.sh` — the telemetry collector it uses

@@ -1,23 +1,23 @@
 # Setup Guide
 
-How to take the patterns in this repo and build your own agentic Hermes setup.
+How to build your own agentic Hermes setup from the patterns in this repo.
 Adapt, don't copy — the code is real but should match your environment.
 
 ## Prerequisites
 
 - A running Hermes Agent instance (gateway + Telegram/Discord/webhook).
-- A model provider configured (see `patterns/model-routing.md`).
+- A configured model provider.
 - (Optional) mem0 for semantic memory (PostgreSQL + pgvector).
 
 ## 1. Identity — SOUL
 
 ```bash
-# Start from the template
 cp TEMPLATES/SOUL.TEMPLATE.md ~/.hermes/SOUL.md
 # edit the persona to be yours
 ```
 
-See `soul/asep.md` for a full worked example.
+See `soul/asep.md` for a full worked example. The SOUL defines who the agent is
+and how it works — it's injected into every session.
 
 ## 2. Skill library
 
@@ -27,11 +27,10 @@ See `soul/asep.md` for a full worked example.
 ## 3. Memory (optional but recommended)
 
 1. Stand up mem0 (PostgreSQL + pgvector).
-2. Configure the client (`mem0_client`).
-3. Add the `mem0-session-loader` hook.
-4. Add the `mem0-auto-cleanup` cron + `cron/scripts/mem0_auto_cleanup.py`.
+2. Configure the client.
+3. Add the `mem0-session-loader` hook (see `hooks/mem0-session-loader/`).
 
-## 4. Hooks
+## 4. Hooks — the honesty guarantees
 
 ```bash
 mkdir -p ~/.hermes/hooks/auto-verify
@@ -41,27 +40,24 @@ cp hooks/auto-verify/HOOK.yaml ~/.hermes/hooks/auto-verify/
 
 **Then restart the gateway** — hooks only load on restart.
 
-## 5. Cron — the self-improving loop
+Add `taste-summary` the same way for the approach/confidence line.
 
-1. Copy `cron/scripts/work_prep_collector.sh` and point its `ACTIVE_REPOS` at
-   your repos.
-2. Create a daily briefing cron (see `cron/daily-briefing.md`).
-3. Pin it to a reliable provider + fallback (see `patterns/model-routing.md`).
+## 5. Self-improving loop
 
-## 6. Model routing
+Set up a scheduled review that reads the last 24h of real work and patches
+skills (see `patterns/self-improving.md`). The mechanics:
 
-Set one clean default + explicit fallback chain (see
-`patterns/model-routing.md`). Remember: fallback config must be a real YAML
-**list**, and provider keys belong in `.env` for cron preflight.
+1. Collect ground truth — recent git log per repo, dirty WIP, service status.
+2. Read recent sessions.
+3. Scan the skill library.
+4. Produce a structured briefing with concrete suggestions.
+5. **Patch skills** with the day's lessons.
 
-## 7. Verify it works
+## 6. Verify it works
 
 ```bash
 # hooks loaded?
 journalctl | grep "Loaded hook"
-
-# telemetry collector runs?
-bash cron/scripts/work_prep_collector.sh
 
 # auto-verify fires on a real task?
 # send a task, watch for the verdict in Telegram
@@ -73,6 +69,4 @@ bash cron/scripts/work_prep_collector.sh
 - [ ] skills curated
 - [ ] mem0 running + session-loader hook
 - [ ] auto-verify + taste-summary hooks (gateway restarted)
-- [ ] daily-briefing cron (provider pinned)
-- [ ] model routing: one default + fallback
-- [ ] `work_prep_collector.sh` points at your repos
+- [ ] self-improving review loop running

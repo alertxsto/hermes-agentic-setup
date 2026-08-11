@@ -26,8 +26,8 @@ the **overclaim problem**. This hook makes the claim verifiable.
 
 - `HOOK.yaml` — registers the hook on `agent:end`.
 - `handler.py` — the verification logic + Telegram verdict.
-- `services.txt` note: the hook reads the service list from
-  `work_prep_collector.sh` (the single source of truth), so adding a project
+- `services` note: the hook reads the service list from the telemetry collector
+  (the single source of truth for active repos/services), so adding a project
   auto-extends verification — no code change needed.
 
 ## Outcome
@@ -35,10 +35,10 @@ the **overclaim problem**. This hook makes the claim verifiable.
 After each real task, the owner gets a compact verdict:
 
 ```
-🧾 Auto-Verify · "gas beresin bug css skill-arena"
+🧾 Auto-Verify · "gas beresin bug css site-checker"
 ✅ Repo bersih
-✅ skill-arena UP
-⚠️ warung-app down (dev-only, expected)
+✅ site-checker UP
+⚠️ the-app down (dev-only, expected)
 ✅ Log bersih
 **⚠️ ada yang perlu dicek**
 ```

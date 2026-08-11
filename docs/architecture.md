@@ -23,7 +23,7 @@ session:start ──► mem0-loader writes recall block ──► system prompt 
       │
 agent:end ──► auto-verify checks "done" claims ──► taste-summary shows approach
       │
-      └──► (background) daily-briefing reads work & patches skills
+      └──► (background) scheduled review reads work & patches skills
 ```
 
 ## The self-improvement flywheel

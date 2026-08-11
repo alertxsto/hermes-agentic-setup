@@ -29,10 +29,10 @@ Flow: when the agent claims completion on a real task, the hook runs cheap,
 deterministic checks and posts a verdict:
 
 ```
-🧾 Auto-Verify · "gas beresin bug css skill-arena"
+🧾 Auto-Verify · "gas beresin bug css site-checker"
 ✅ Repo bersih
-✅ skill-arena UP
-⚠️ warung-app down (dev-only, expected)
+✅ site-checker UP
+⚠️ the-app down (dev-only, expected)
 ✅ Log bersih
 **⚠️ ada yang perlu dicek**
 ```

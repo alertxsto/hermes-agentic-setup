@@ -30,6 +30,6 @@ hand-off.
 
 ## Companion: mem0 auto-cleanup
 
-Memory stores accumulate noise and duplicates over time. A cron runs a
-**conservative** cleanup daily (content-identical dedup, obvious noise, leaked
-secrets) while preserving good facts — see [`cron/mem0-auto-cleanup.md`](../../cron/mem0-auto-cleanup.md).
+Memory stores accumulate noise and duplicates over time. Run a **conservative**
+cleanup on a schedule (content-identical dedup, obvious noise, leaked secrets)
+while preserving good facts. Durable facts are never deleted.

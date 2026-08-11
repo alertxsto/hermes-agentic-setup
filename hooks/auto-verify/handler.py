@@ -61,7 +61,7 @@ def _collector():
     source of truth for active repos and dev services this user runs.
     services is a list of (name, host, port, dev_only)."""
     script = Path.home() / ".hermes" / "scripts" / "work_prep_collector.sh"
-    repos = ["skill-arena", "warung-app"]  # safe fallback
+    repos = ["site-checker", "the-app"]  # safe fallback
     services = []  # list of (name, host, port, dev_only)
     try:
         text = script.read_text()
@@ -114,8 +114,8 @@ def verify():
                 checks.append(("warn", f"🌐 {name} down (important)"))
     else:
         code = _run("curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/ --max-time 3")
-        checks.append(("ok", "🌐 skill-arena UP") if code == "200"
-                      else ("warn", f"🌐 skill-arena HTTP {code or 'down'}"))
+        checks.append(("ok", "🌐 site-checker UP") if code == "200"
+                      else (f"⚠️ site-checker HTTP {code or 'down'}"))
 
     # 3. Real errors only, recent (last 2h). Use a timestamp-bounded grep: only
     #    lines whose leading ISO timestamp is >= 2h ago. Bare traceback continuation

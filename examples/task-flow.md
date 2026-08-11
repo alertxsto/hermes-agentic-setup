@@ -3,7 +3,7 @@
 A concrete walkthrough of everything that happens when the owner sends a task.
 This ties together SOUL, memory, hooks, and cron.
 
-## Scenario: "gas beresin bug css di skill-arena"
+## Scenario: "gas beresin bug css di site-checker"
 
 ### 1. Session start (memory injection)
 ```
@@ -15,9 +15,9 @@ session:start ──► mem0-session-loader hook
 
 ### 2. Agent works (SOUL + skills)
 ```
-owner: "gas beresin bug css di skill-arena"
+owner: "gas beresin bug css di site-checker"
 agent: message matches real-task signal (beresin)
-  └─► loads relevant skills (e.g. frontend / skill-arena)
+  └─► loads relevant skills (e.g. frontend / site-checker)
   └─► follows SOUL: plan, verify, honest
   └─► edits code, runs build/tests
 ```
@@ -40,12 +40,11 @@ agent:end ──► taste-summary hook
   └─► posts compact taste + confidence
 ```
 
-### 5. Learning (later, in the daily briefing)
+### 5. Learning (later, in the scheduled review)
 ```
-07:00 ──► daily-briefing cron
-  └─► telemetry collector: git log shows the css fix commit
-  └─► session search: "beresin bug css skill-arena"
-  └─► skill scan: frontend skill exists, could improve
+[scheduled] ──► review reads real git log: the css fix commit
+  └─► session search: the work that was done
+  └─► skill scan: a skill exists, could improve
   └─► proposes [P1] next task, [P2] skill gap, [P3] tooling fix
   └─► patches skills with today's lessons
 ```
