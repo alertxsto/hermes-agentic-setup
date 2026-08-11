@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Auto-verify hook — after a REAL task completes, run cheap deterministic checks
-(git clean, service up, recent-error scan) and post a verdict to Telegram.
+"""Auto-verify hook (smart) — after a REAL task completes, verify the project
+the task actually touched, plus a concise overall health check.
 
-Security & reliability notes:
-  - Uses shell=False everywhere (no command injection from parsed repo/service
-    names). No `shell=True`.
-  - Never silently swallows failures: every exception is logged to a hook log
-    file so a dead hook is visible, not silent.
-  - Repo/service list is read from the telemetry collector; generic defaults are
-    used only as a last resort (no hardcoded personal project names).
+What makes it adaptive instead of checking every service:
+  - Project map is auto-discovered from git repos on disk + the collector's
+    check_port entries (no hardcoded personal list).
+  - The task message is scanned for the project(s) it references; only those
+    are verified in detail.
+  - A brief overall (log scan, sect summary) catches anything else.
+  - If no project is matched, it falls back to checking the whole set briefly.
 
+Security: shell=False everywhere, markdown-escaped output, all failures logged.
 Fires only when all four guards pass: real task + completion claim + substantial
 reply + cooldown window open.
 """
@@ -31,12 +32,10 @@ LOG_DIR = Path.home() / ".hermes" / "hooks" / "auto-verify"
 LOG_FILE = LOG_DIR / "hook.log"
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    filename=str(LOG_FILE), level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
+logging.basicConfig(filename=str(LOG_FILE), level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
 
-# Real-task signals — conservative, excludes ambiguous everyday words.
+# Real-task signals — conservative.
 TASK_RE = re.compile(
     r"\b(fix|fixing|setup|install|bikin|buat|buatin|kerjain|kerjakan|beresin|benerin|"
     r"coba (cek|baca|riset|research)|research|riset|delegate|analisa|analisis|"
@@ -54,8 +53,7 @@ def _escape_markdown(text: str) -> str:
 
 
 def _run(argv, cwd=None, timeout=8):
-    """Run a command with NO shell (argv list). Returns stdout or '' on failure.
-    Failures are logged, not swallowed."""
+    """Run with NO shell. Returns stdout or '' on failure."""
     import subprocess
     try:
         r = subprocess.run(argv, shell=False, capture_output=True, text=True,
@@ -77,94 +75,97 @@ def _in_cooldown():
         return False
     except Exception as e:
         logging.warning("cooldown check failed: %s", e)
-        return False  # fail open: don't block a verification on cooldown errors
+        return False
 
 
-def _collector():
-    """Parse (repos, services) from the telemetry collector — single source of
-    truth. Returns generic defaults if the script is missing/unparseable."""
-    script = Path.home() / ".hermes" / "scripts" / "work_prep_collector.sh"
-    repos = []       # empty -> no repo checks (graceful, not false positives)
-    services = []    # list of (name, host, port, dev_only)
+def _discover_projects():
+    """Return dict project_name -> {dir, port, dev_only, aliases}.
+    Auto-discovered: git repos in $HOME, plus check_port entries from the
+    collector (aliases from name + slug). Nothing hardcoded."""
+    home = Path.home()
+    # Repos in $HOME that are git repos
+    projects = {}
+    for d in home.iterdir():
+        if d.is_dir() and (d / ".git").exists():
+            name = d.name
+            projects[name] = {"dir": str(d), "port": None, "dev_only": False, "aliases": {name}}
+    # Ports / aliases from the collector's check_port lines
+    script = home / ".hermes" / "scripts" / "work_prep_collector.sh"
     try:
         text = script.read_text()
-        m = re.search(r"ACTIVE_REPOS=\((.*?)\)", text, re.S)
-        if m:
-            parsed = re.findall(r'"([^"]+)"', m.group(1))
-            repos = parsed
-        for line in re.findall(r'check_port\s+"([^"]+)"\s+"([^"]+)"(.*)$', text, re.M):
-            nm, url, tail = line
+        for nm, url, tail in re.findall(r'check_port\s+"([^"]+)"\s+"([^"]+)"(.*)$', text, re.M):
             pm = re.search(r"localhost:(\d+)", url)
-            if pm:
-                services.append((nm, "127.0.0.1", int(pm.group(1)), "dev-only" in tail))
+            if not pm:
+                continue
+            slug = nm.split()[0].lower().strip()  # e.g. "skill-arena" from "(Expo)"
+            key = slug if slug in projects else nm.lower().replace(" ", "_")
+            if key not in projects:
+                projects[key] = {"dir": None, "port": int(pm.group(1)),
+                                 "dev_only": "dev-only" in tail, "aliases": {nm.lower()}}
+            else:
+                projects[key]["port"] = int(pm.group(1))
+                projects[key]["dev_only"] = "dev-only" in tail
+            projects[key]["aliases"].add(nm.lower())
     except Exception as e:
         logging.warning("collector parse failed: %s", e)
-    return repos, services
+    # Add generic alias: slug without domain-ish phrasing
+    for name, p in list(projects.items()):
+        slug = name.lower().replace("_", "-").replace(" ", "-")
+        for part in slug.split("-"):
+            if len(part) >= 3:
+                p["aliases"].add(part)
+        p["aliases"].add(slug)
+    return projects
 
 
-def verify():
-    """Return list of (status, msg). status in {'ok','warn','fail'}."""
-    checks = []
-    home = Path.home()
-    repos, services = _collector()
+def _detect_targets(message, projects):
+    """Return list of project names referenced in the task message."""
+    msg = message.lower()
+    hits = []
+    for name, p in projects.items():
+        # match the primary name or any alias as a whole/regex word
+        for alias in p["aliases"]:
+            if re.search(r"\b" + re.escape(alias) + r"\b", msg):
+                hits.append(name)
+                break
+    # dedupe, keep order
+    return list(dict.fromkeys(hits))
 
-    # 1. Repo cleanliness. Empty repos -> skip (no false positives on a fork).
-    if repos:
-        dirty = []
-        for repo in repos:
-            # sanitize: only simple names, never pass arbitrary strings to a shell
-            if not re.fullmatch(r"[A-Za-z0-9_-]+", repo) or repo in (".", ".."):
-                logging.warning("skipping repo with unsafe name: %r", repo)
-                continue
-            out = _run(["git", "status", "--short"], cwd=str(home / repo))
-            if out:
-                dirty.append(f"{_escape_markdown(repo)}: {len(out.splitlines())} dirty")
-        checks.append(("warn", "📦 Repo dirty: " + "; ".join(dirty)) if dirty
-                      else ("ok", "📦 Repo bersih"))
 
-    # 2. Service health. dev-only services skipped when down (expected).
-    for name, host, port, dev_only in services:
-        url = f"http://{host}:{port}/"
+def _check_project(name, p):
+    """Verify one project: repo clean (if dir) + service up (if port). Returns list[(status,msg)]."""
+    out = []
+    # Repo cleanliness
+    if p["dir"]:
+        dirty = _run(["git", "status", "--short"], cwd=p["dir"])
+        if dirty:
+            out.append(("warn", f"📂 {_escape_markdown(name)}: {len(dirty.splitlines())} file bersi belum commit"))
+        else:
+            out.append(("ok", f"📂 {_escape_markdown(name)}: bersih"))
+    # Service
+    if p["port"]:
+        url = f"http://127.0.0.1:{p['port']}/"
         code = _run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url, "--max-time", "3"])
-        esc_name = _escape_markdown(name)
+        esc = _escape_markdown(name)
         if code == "200":
-            checks.append(("ok", f"🌐 {esc_name} UP"))
-        elif dev_only:
-            continue
+            out.append(("ok", f"🌐 {esc}: UP"))
+        elif p["dev_only"]:
+            out.append(("ok", f"🌐 {esc}: (dev-only, off malam ini — normal)"))
         elif code:
-            checks.append(("warn", f"🌐 {esc_name} HTTP {code}"))
+            out.append(("warn", f"🌐 {esc}: HTTP {code} — cek! (port {p['port']})"))
         else:
-            checks.append(("warn", f"🌐 {esc_name} down (important)"))
+            out.append(("warn", f"🌐 {esc}: MATI — port {p['port']} gak jalan. Cek proses."))
+    return out
 
-    # 3. Real errors in the agent log, last 2h, noise filtered. Pure Python —
-    #    no shell pipeline.
-    log_path = home / ".hermes" / "logs" / "agent.log"
-    if log_path.exists():
-        cutoff = datetime.now() - timedelta(hours=2)
-        errs = []
-        with log_path.open(encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                m = re.match(r"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})", line)
-                if not m:
-                    continue  # only dated header lines
-                if "ERROR" not in line and "CRITICAL" not in line:
-                    continue
-                if any(n in line for n in ("stream_error_clean", "stream ended", "INFO")):
-                    continue
-                try:
-                    ts = datetime.fromisoformat(m.group(1).replace(" ", "T"))
-                except Exception:
-                    continue
-                if ts >= cutoff:
-                    errs.append(line.strip())
-        if errs:
-            checks.append(("warn", "⚠️ Recent ERROR: " + " | ".join(_escape_markdown(e[:90]) for e in errs[:2])))
-        else:
-            checks.append(("ok", "📋 Log bersih"))
-    else:
-        checks.append(("ok", "📋 (no agent log)"))
 
-    return checks
+def _overall(repo_dirty_count, warn_count):
+    """One-line overall summary from counts."""
+    parts = []
+    if repo_dirty_count:
+        parts.append(f"{repo_dirty_count} repo berisi uncommitted")
+    if warn_count:
+        parts.append(f"{warn_count} warning")
+    return parts if parts else ["✅ semua aman"]
 
 
 async def handle(event_type: str, context: dict):
@@ -182,13 +183,50 @@ async def handle(event_type: str, context: dict):
     if _in_cooldown():
         return
 
-    checks = await asyncio.to_thread(verify)
-    head = (message[:55] + "…") if len(message) > 55 else message
+    projects = await asyncio.to_thread(_discover_projects)
+    targets = _detect_targets(message, projects)
+
+    # If no project detected, fall back to whole set (brief). Limit to avoid spam.
+    if not targets:
+        # prefer projects that have a service port (more meaningful), cap ~5
+        targets = [n for n, p in projects.items() if p["port"]][:5]
+
+    checks = []
+    for name in targets:
+        checks += await asyncio.to_thread(_check_project, name, projects[name])
+
+    # Overall: log error scan + sector summary
+    head = (message[:50] + "…") if len(message) > 50 else message
     lines = [f"🧾 **Auto-Verify** · \"{_escape_markdown(head)}\""]
+    lines.append(f"   fokus: {_escape_markdown(', '.join(targets) or 'seluruh')}")
     for status, text in checks:
-        icon = "✅" if status == "ok" else ("⚠️" if status == "warn" else "❌")
-        lines.append(f"{icon} {_escape_markdown(text)}")
-    verdict = "✅ aman" if all(s == "ok" for s, _ in checks) else "⚠️ ada yang perlu dicek"
+        icon = "✅" if status == "ok" else "⚠️"
+        lines.append(f"{icon} {text}")
+
+    # Log error scan (overall, cheap)
+    log_path = Path.home() / ".hermes" / "logs" / "agent.log"
+    errs = []
+    if log_path.exists():
+        cutoff = datetime.now() - timedelta(hours=2)
+        with log_path.open(encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                m = re.match(r"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})", line)
+                if not m or ("ERROR" not in line and "CRITICAL" not in line):
+                    continue
+                if any(n in line for n in ("stream_error_clean", "stream ended", "INFO")):
+                    continue
+                try:
+                    if datetime.fromisoformat(m.group(1).replace(" ", "T")) >= cutoff:
+                        errs.append(line.strip())
+                except Exception:
+                    continue
+    if errs:
+        lines.append(f"⚠️ Log: {len(errs)} error dalam 2 jam — {_escape_markdown(errs[-1][:70])}")
+    else:
+        lines.append("✅ Log bersih")
+
+    warns = sum(1 for s, _ in checks if s == "warn") + (1 if errs else 0)
+    verdict = "⚠️ ada yang perlu dicek" if warns else "✅ aman"
     lines.append(f"**{verdict}**")
 
     try:
