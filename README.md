@@ -175,8 +175,9 @@ inherits the previous ones, so the agent compounds.
 Procedural knowledge lives as **skills**; they're loaded when relevant. The
 library is actively curated:
 
-- **~147 skills**, merged down from 163 by consolidating 11 overlapping groups
-  into class-level umbrellas.
+- **~180 skills**, curated across 15 categories (autonomous-ai-agents, creative,
+  devops, github, mlops, security, software-development, taste, and more),
+  consolidated over time by merging overlapping groups into class-level umbrellas.
 - **Rule:** a skill captures a *recurring class of work*, not a one-off. Skills
   born from a single whim are clutter and get removed.
 - A skill is **patched immediately** when it's found outdated or wrong — skills

@@ -11,6 +11,7 @@ A high-level view of how the skill library is organized. Full details in
 | **creative** | design, ASCII/art, video, diagrams | architecture-diagram, excalidraw, manim-video |
 | **devops** | infra, tunnels, self-hosting, backups | cloudflared-tunnel, hermes-cron-operations, lvm-storage |
 | **email** | inbox triage, IMAP/SMTP | himalaya, email-inbox-triage |
+| **firecrawl** | web scraping/crawl/search/extract | firecrawl-scrape, firecrawl-search, firecrawl-deep-research |
 | **github** | repo/PR/issue workflows | github-pr-workflow, github-code-review |
 | **media** | youtube transcripts, gifs, audio | youtube-transcript-processor, gif-search |
 | **mlops** | llm serving, evaluation, HF hub | llama-cpp, vllm, evaluating-llms-harness |
@@ -18,12 +19,27 @@ A high-level view of how the skill library is organized. Full details in
 | **productivity** | docs/spreadsheets/presentations | docx, xlsx, powerpoint, notion |
 | **research** | papers, market data, monitoring | arxiv, blogwatcher, grounded-citations |
 | **security** | audit, intrusion, scenario-hardening | analyzing-*-logs, ct-logs, api-security |
+| **smart-home** | smart-device control | openhue |
+| **social-media** | X/Twitter via CLI | xurl |
 | **software-development** | coding QA, debugging, builds | ai-website-judge, systematic-debugging, webreaper |
 | **taste** | anti-slop design rules | taste-default, taste-editorial, taste-soft-calm |
 
+## MCP servers (7 enabled)
+
+| Server | Purpose |
+|---|---|
+| `github` | repos, PRs, issues |
+| `chrome-devtools` | browser automation |
+| `postgres` | read-only SQL |
+| `firecrawl` | web scraping/crawl/search |
+| `memory` | knowledge graph |
+| `context7` | up-to-date library docs |
+| `sequential-thinking` | structured multi-step reasoning |
+
 ## Curation facts
 
-- **146 skills** total after merging 11 overlapping groups (was 163). See
+- **~180 skills** across 15 categories (above). The library is actively curated —
+  overlapping groups are merged into class-level umbrellas over time. See
   [`patterns/skill-curation.md`](../patterns/skill-curation.md).
 - **`taste-*`** (6 sub-aesthetics), **`github/*`**, **`creative/*`**,
   **`firecrawl/*`** are intentionally NOT merged — each is a distinct concern.

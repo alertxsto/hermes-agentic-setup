@@ -9,7 +9,7 @@ use. This is the actual mechanism — read it alongside the hook sources.
 |---|---|---|
 | **Gateway** | Hermes gateway (Telegram/Discord/webhook) | single event bus; fires hooks at session/agent lifecycle points |
 | **Identity** | `SOUL.md` | stable personality + operating code across every session |
-| **Skill library** | ~147 class-level skills | procedural knowledge loaded on demand |
+| **Skill library** | ~180 class-level skills | procedural knowledge loaded on demand |
 | **Memory** | mem0 (PostgreSQL + pgvector) + `MEMORY.md` | durable semantic recall across sessions |
 | **Hooks** | `mem0-session-loader`, `auto-verify`, `taste-summary` | event-driven behavior at session start / agent end |
 | **Tools** | MCP servers + terminal + web | the agent's hands |

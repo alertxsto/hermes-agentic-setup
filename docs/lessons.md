@@ -49,7 +49,8 @@ scenario that cost time — documented so it doesn't happen twice.
 ## Skills
 
 - **Skills should be class-level, not one-off.** A skill born from a single whim
-  is clutter. Merge overlaps into umbrellas (163 → 146).
+  is clutter. Merge overlaps into umbrellas (a real pass took 163 → 146, later
+  curated to ~180 as new class-level skills were added).
 - **Merge with intent.** Track merges (`absorbed_into`) so cron jobs / references
   that pointed at the old skill get redirected automatically.
 - **Patch skills immediately.** If a loaded skill has a wrong step or missing
