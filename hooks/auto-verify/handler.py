@@ -108,12 +108,10 @@ def _discover_projects():
             projects[key]["aliases"].add(nm.lower())
     except Exception as e:
         logging.warning("collector parse failed: %s", e)
-    # Add generic alias: slug without domain-ish phrasing
+    # Add generic aliases: full slug + snake/camel variants. Skip per-part
+    # splitting (e.g. "skill-arena" -> "skill") which caused false positives.
     for name, p in list(projects.items()):
         slug = name.lower().replace("_", "-").replace(" ", "-")
-        for part in slug.split("-"):
-            if len(part) >= 3:
-                p["aliases"].add(part)
         p["aliases"].add(slug)
     return projects
 
@@ -150,22 +148,12 @@ def _check_project(name, p):
         if code == "200":
             out.append(("ok", f"🌐 {esc}: UP"))
         elif p["dev_only"]:
-            out.append(("ok", f"🌐 {esc}: (dev-only, off malam ini — normal)"))
+            out.append(("ok", f"🌐 {esc}: off (dev-only — normal)"))
         elif code:
             out.append(("warn", f"🌐 {esc}: HTTP {code} — cek! (port {p['port']})"))
         else:
             out.append(("warn", f"🌐 {esc}: MATI — port {p['port']} gak jalan. Cek proses."))
     return out
-
-
-def _overall(repo_dirty_count, warn_count):
-    """One-line overall summary from counts."""
-    parts = []
-    if repo_dirty_count:
-        parts.append(f"{repo_dirty_count} repo berisi uncommitted")
-    if warn_count:
-        parts.append(f"{warn_count} warning")
-    return parts if parts else ["✅ semua aman"]
 
 
 async def handle(event_type: str, context: dict):
